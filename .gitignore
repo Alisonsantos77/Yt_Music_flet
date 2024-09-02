@@ -1,0 +1,32 @@
+# Ignorar a pasta de ambientes virtuais
+.venv/
+venv/
+
+# Ignorar as configurações do PyCharm/IDEA
+.idea/
+
+# Ignorar os arquivos de cache do Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignorar as pastas de build
+build/
+dist/
+*.egg-info/
+
+# Ignorar os arquivos de configuração de ambiente
+.env
+
+# Ignorar o arquivo de configuração com chaves sensíveis
+config.py
+
+# Ignorar arquivos de log
+*.log
+
+# Ignorar diretórios de dependências
+node_modules/
+
+# Ignorar pastas do sistema operacional
+.DS_Store
+Thumbs.db
