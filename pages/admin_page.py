@@ -1,20 +1,18 @@
 import flet as ft
-from services import Fetch  # Supondo que você tenha uma função para buscar os dados
+from partials.content import MainContent
+from partials.sidebar import Sidebar
 
 def AdminPage(page: ft.Page):
     page.title = "Administração"
 
-    # Função para tratar o logout
-    def handle_logout(e):
-        page.go("/login")
+    sidebar = Sidebar(col={'xs': 0, 'md': 5, 'lg': 4, 'xxl': 3})
+    main = MainContent(col={'xs': 12, 'md': 7, 'lg': 8, 'xxl': 9})
+
     # Layout do dashboard
     return ft.Column(
         controls=[
-            ft.Text(value="Administração", size=30, weight=ft.FontWeight.W_900),
-            ft.ElevatedButton(
-                text="Logout",
-                on_click=handle_logout
-            ),
+            sidebar,
+            main,
         ],
         alignment=ft.MainAxisAlignment.CENTER,
         spacing=20
