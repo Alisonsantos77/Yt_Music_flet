@@ -1,19 +1,19 @@
 import flet as ft
-from partials.content import MainContent
 from partials.sidebar import Sidebar
+from partials.content import MainContent
+
 
 def AdminPage(page: ft.Page):
-    page.title = "Administração"
+    page.title = "Painel Alison dev"
 
-    sidebar = Sidebar(col={'xs': 0, 'md': 5, 'lg': 4, 'xxl': 3})
-    main = MainContent(col={'xs': 12, 'md': 7, 'lg': 8, 'xxl': 9})
+    sidebar = Sidebar()
+    content = MainContent()
 
-    # Layout do dashboard
-    return ft.Column(
+    return ft.ResponsiveRow(
         controls=[
-            sidebar,
-            main,
+            ft.Column(col={"sm": 0, "xl": 4}, controls=[sidebar], expand=False),
+            ft.Column(col={"sm": 12, "xl": 8}, controls=[content], expand=True),
         ],
-        alignment=ft.MainAxisAlignment.CENTER,
-        spacing=20
+        spacing=20,
+        expand=True
     )
