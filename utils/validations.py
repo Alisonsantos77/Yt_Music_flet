@@ -69,13 +69,12 @@ def validate_password(password: str) -> bool:
     return True
 
 
-def validate_login(username: str, email: str, password: str) -> tuple[bool, str]:
+def validate_login(username: str, password: str) -> tuple[bool, str]:
     """
     Valida os campos de login.
 
     Args:
         username (str): Nome de usuário.
-        email (str): Endereço de email.
         password (str): Senha do usuário.
 
     Returns:
@@ -85,17 +84,11 @@ def validate_login(username: str, email: str, password: str) -> tuple[bool, str]
     # Verifica se todos os campos estão preenchidos
     if not username:
         return False, "O campo de nome de usuário está vazio."
-    if not email:
-        return False, "O campo de email está vazio."
     if not password:
         return False, "O campo de senha está vazio."
 
     # Verifica se o nome de usuário é válido
     if not validate_username(username):
         return False, "O nome de usuário é inválido. Use pelo menos 3 caracteres alfanuméricos."
-
-    # Verifica se o email é válido
-    if not validate_email(email):
-        return False, "O email fornecido é inválido."
 
     return True, ""
