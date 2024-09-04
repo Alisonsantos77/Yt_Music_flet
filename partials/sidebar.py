@@ -2,21 +2,30 @@ import flet as ft
 
 
 class SidebarHeader(ft.UserControl):
+
     def build(self):
         return ft.Container(
             content=ft.Column(
                 controls=[
-                    ft.ResponsiveRow(
-                        controls=[
-                            ft.Text(value='Alison Santos', theme_style=ft.TextThemeStyle.BODY_LARGE),
-                            ft.Text(value='Desenvolvedor Backend', theme_style=ft.TextThemeStyle.BODY_MEDIUM),
-                            ft.Image(
-                                src='images/profile_resize.png',
-                                border_radius=ft.border_radius.all(100),
-                                width=100,
-                            ),
-                        ]
-                    ),
+                    ft.ResponsiveRow([
+                        ft.Column(
+                            col={"sm": 0, "xl": 4},
+                            controls=[
+                                ft.CircleAvatar(
+                                    foreground_image_src="https://robohash.org/mail@ashallendesign.co.uk/portraits/men/3.jpg",
+                                    width=100,
+                                    height=100,
+                                    content=ft.Text("AS"),
+                                )
+                            ]),
+                        ft.Column(
+                            col={"sm": 12, "xl": 8},
+                            controls=[
+                                ft.Text(value='Alison Santos', theme_style=ft.TextThemeStyle.BODY_LARGE),
+                                ft.Text(value='Desenvolvedor Backend', theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+                            ]
+                        ),
+                    ])
                 ],
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER
             ),
@@ -30,27 +39,45 @@ class SidebarContent(ft.UserControl):
         super().__init__()
         self.expand = True
 
-    def build(self):
+    def logout_app(self, e):
+        self.page.go('/login')
 
-        technologies = ft.Column(
+    def build(self):
+        menuitem = ft.Column(
+            scroll=ft.ScrollMode.HIDDEN,
             controls=[
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='Flet', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='Versionamento com GIT', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='Tailwindcss', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='Django', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='Tkinter', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='Django Rest', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='SQLite3', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-                ft.ListTile(leading=ft.Icon(name=ft.icons.CHECK, color=ft.colors.PRIMARY),
-                            title=ft.Text(value='PostgreSQL', theme_style=ft.TextThemeStyle.BODY_MEDIUM)),
-            ]
+                ft.ListTile(
+                    leading=ft.Icon(name=ft.icons.DASHBOARD),
+                    title=ft.Text(value='Dashboard', theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+                    on_click=lambda e: print("Dashboard clicked"),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(name=ft.icons.WORK),
+                    title=ft.Text(value='Projects', theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+                    on_click=lambda e: print("Projects clicked"),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(name=ft.icons.CHECKLIST),
+                    title=ft.Text(value='Task list', theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+                    selected=True,
+                    hover_color=ft.colors.PRIMARY,
+                    selected_color=ft.colors.ON_PRIMARY,
+                    on_click=lambda e: print("Task list clicked"),
+                ),
+                ft.ListTile(
+                    leading=ft.Icon(name=ft.icons.BUILD),
+                    title=ft.Text(value='Services', theme_style=ft.TextThemeStyle.BODY_MEDIUM),
+                    on_click=lambda e: print("Services clicked"),
+                ),
+            ],
+            alignment=ft.MainAxisAlignment.SPACE_EVENLY,
+            spacing=10,
+        )
+        logout = ft.ElevatedButton(
+            icon=ft.icons.EXIT_TO_APP,
+            text='Logout',
+            color='red',
+            on_click=self.logout_app
         )
         cv = ft.TextButton(
             text='Download CV', style=ft.ButtonStyle(color=ft.colors.GREY), icon=ft.icons.DOWNLOAD,
@@ -58,15 +85,15 @@ class SidebarContent(ft.UserControl):
             url='https://drive.google.com/uc?export=download&id=19UKY95n4gwQgweM5b6yiTt5N7B_u03Fj')
 
         return ft.Container(
-            bgcolor=ft.colors.BLACK12,
             padding=ft.padding.all(20),
             content=ft.Column(
+                alignment=ft.MainAxisAlignment.SPACE_AROUND,
                 scroll=ft.ScrollMode.HIDDEN,
                 controls=[
                     ft.Divider(height=30),
-                    technologies,
+                    menuitem,
                     ft.Divider(height=30),
-                    cv,
+                    logout,
                 ]
             )
         )
