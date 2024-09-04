@@ -4,21 +4,81 @@ from services import Fetch, Commit
 
 
 def LoginPage(page: ft.Page):
-    page.bgcolor = ft.colors.GREEN_50
+
+    new_avatar = ft.Ref[ft.CircleAvatar]()
+
+    def generator_avatar(e):
+        if not input_username.value:
+            new_avatar.current.foreground_image_src = "https://robohash.org/userdefault.png"
+            new_avatar.current.content = ft.Text("", size=30, weight=ft.FontWeight.BOLD)
+        else:
+            new_avatar.current.foreground_image_src = f"https://robohash.org/{input_username.value}.png"
+            new_avatar.current.content = ft.Text(input_username.value[0].upper(), size=30, weight=ft.FontWeight.BOLD)
+        new_avatar.current.update()
+
+    # Inicializa o avatar com um CircleAvatar vazio
+    avatar = ft.Container(
+        content=ft.Row(
+            controls=[
+                ft.CircleAvatar(
+                    foreground_image_src="https://robohash.org/userdefault.png",
+                    content=ft.Text("FF"),
+                    width=100,
+                    height=100,
+                    ref=new_avatar
+                )
+            ]
+        ),
+        col={"sm": 5, "md": 4, "xl": 12},
+    )
+
+    def register_redirect(e):
+        page.go('/register')
 
     # Campos de entrada de dados
-    input_username = ft.TextField(hint_text='Insira seu nome de usuário')
-    input_email = ft.TextField(hint_text='Insira seu email')
-    input_senha = ft.TextField(hint_text='Insira sua senha', password=True, can_reveal_password=True)
+    input_username = ft.TextField(
+        hint_text='Insira seu nome de usuário',
+        col={"sm": 8, "md": 12, "xl": 12},
+        on_change=generator_avatar,
+        border="underline",
+        max_lines=1,
+        max_length=20,
+    )
+
+    input_senha = ft.TextField(
+        hint_text='Insira sua senha',
+        password=True,
+        border="underline",
+        max_lines=1,
+        max_length=20,
+        can_reveal_password=True,
+        col={"sm": 8, "md": 12, "xl": 12},
+    )
+
+    password_reset_btn = ft.TextButton(
+        text='Esqueceu sua senha?',
+        icon_color=ft.colors.BLACK12,
+        col={"sm": 8, "md": 12, "xl": 12},
+        on_click=lambda _: print('Resetar senha')
+    )
+    new_account_btn = ft.TextButton(
+        text='Criar nova conta',
+        col={"sm": 8, "md": 12, "xl": 12},
+        style=ft.ButtonStyle(
+            color=ft.colors.BLACK,
+            elevation=2,
+            overlay_color=ft.colors.TRANSPARENT
+        ),
+        on_click=register_redirect
+    )
 
     # Função para tratar o evento de login
     def handle_login(e):
         username = input_username.value
-        email = input_email.value
         password = input_senha.value
 
         # Validando os campos de login
-        is_valid, error_message = validate_login(username, email, password)
+        is_valid, error_message = validate_login(username, password)
         print(f"Validando login: is_valid={is_valid}, error_message={error_message}")
         if not is_valid:
             page.snack_bar = ft.SnackBar(
@@ -39,35 +99,44 @@ def LoginPage(page: ft.Page):
             # Verificar se o admin existe e a senha corresponde
             admin = Fetch.fetch_admin_by_username(username)
 
-            if admin is not None and admin['password'] == password and admin['email'] == email:
-                # Caso o usuário seja administrador
-                page.snack_bar = ft.SnackBar(
-                    content=ft.Text(
-                        value=f'{username} entrou como administrador',
-                        size=20,
-                        color=ft.colors.BLUE,
-                        weight=ft.FontWeight.W_600,
-                        italic=True
+            if admin is not None:
+                if admin['password'] == password:
+                    # Caso o usuário seja administrador
+                    page.snack_bar = ft.SnackBar(
+                        content=ft.Text(
+                            value=f'{username} entrou como administrador',
+                            size=20,
+                            color=ft.colors.BLUE,
+                            weight=ft.FontWeight.W_600,
+                            italic=True
+                        )
                     )
-                )
-                page.snack_bar.open = True
-                page.update()
-                page.go('/admin')
-            elif user is not None and user['password'] == password and user['email'] == email:
-                Commit.update_last_login(user['id'])
+                    page.snack_bar.open = True
+                    page.update()
+                    page.go('/admin')
+            elif user is not None:
+                if user['password'] == password:
+                    # Atualizar o último login
+                    Commit.update_last_login(user['id'])
 
-                page.snack_bar = ft.SnackBar(
-                    content=ft.Text(
-                        value='Login realizado com sucesso',
-                        size=20,
-                        color=ft.colors.BLUE,
-                        weight=ft.FontWeight.W_600,
-                        italic=True
+                    # Verificar se o avatar do usuário está registrado
+                    if 'avatar_url' not in user or not user['avatar_url']:
+                        # Atualizar o avatar no perfil do usuário
+                        avatar_url = new_avatar.current.foreground_image_src
+                        Commit.update_avatar_url(user['id'], avatar_url)
+
+                    page.snack_bar = ft.SnackBar(
+                        content=ft.Text(
+                            value='Login realizado com sucesso',
+                            size=20,
+                            color=ft.colors.BLUE,
+                            weight=ft.FontWeight.W_600,
+                            italic=True
+                        )
                     )
-                )
-                page.snack_bar.open = True
-                page.update()
-                page.go('/home')
+                    page.snack_bar.open = True
+                    page.update()
+                    page.go('/home')
             else:
                 print("Nome de usuário ou senha incorretos")
                 raise Exception("Nome de usuário ou senha incorretos")
@@ -119,40 +188,67 @@ def LoginPage(page: ft.Page):
             ),
             content=ft.Column(
                 horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                alignment=ft.MainAxisAlignment.SPACE_EVENLY,
                 controls=[
-                    ft.Text(
-                        value='Bem-vindo de volta!',
-                        size=32,
-                        color=ft.colors.WHITE,
-                        weight=ft.FontWeight.BOLD,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    ft.Text(
-                        value='Entre com suas credenciais para acessar sua conta.',
-                        size=16,
-                        color=ft.colors.WHITE70,
-                        text_align=ft.TextAlign.CENTER,
-                    ),
-                    input_username,
-                    input_email,
-                    input_senha,
-                    ft.Row(
-                        alignment=ft.MainAxisAlignment.CENTER,
+                    ft.ResponsiveRow(
+                        col={"sm": 10, "md": 4, "xl": 12},
                         controls=[
-                            ft.ElevatedButton(
-                                "ENTRAR",
-                                icon=ft.icons.DOOR_FRONT_DOOR,
-                                on_click=handle_login  # Adiciona o evento de clique
+                            ft.Column(
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+                                controls=[
+                                    ft.Row(
+                                        alignment=ft.MainAxisAlignment.CENTER,
+                                        controls=[
+                                            avatar
+                                        ]
+                                    ),
+                                    ft.Text(
+                                        value="Bem-vindo de volta!",
+                                        size=20,
+                                        color=ft.colors.WHITE,
+                                        weight=ft.FontWeight.BOLD,
+                                        col={"sm": 5, "md": 4, "xl": 12},
+                                    ),
+                                ]
                             ),
                         ],
                     ),
-                    ft.TextButton(
-                        text="Não possui uma conta? Registre-se.",
-                        style=ft.ButtonStyle(
-                            color=ft.colors.CYAN_200,
-                        ),
-                        on_click=lambda _: page.go('/register'),
-                    )
+                    ft.ResponsiveRow(
+                        col={"sm": 10, "md": 12, "xl": 12},
+                        controls=[
+                            input_username,
+                            input_senha,
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.END,
+                                controls=[
+                                    password_reset_btn
+                                ]
+                            ),
+                            ft.ElevatedButton(
+                                text="Acessar conta",
+                                style=ft.ButtonStyle(
+                                    padding=ft.padding.all(10),
+                                    bgcolor={
+                                        ft.MaterialState.HOVERED: ft.colors.PRIMARY,
+                                    },
+                                    color={
+                                        ft.MaterialState.DEFAULT: ft.colors.WHITE,
+                                        ft.MaterialState.HOVERED: ft.colors.BLACK,
+
+                                    }
+                                ),
+                                on_click=handle_login
+                            ),
+                            ft.Row(
+                                alignment=ft.MainAxisAlignment.CENTER,
+                                controls=[
+                                    new_account_btn
+                                ]
+                            ),
+                        ],
+                        run_spacing={"xs": 10},
+                    ),
                 ],
                 spacing=20
             )
