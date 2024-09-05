@@ -1,10 +1,12 @@
 import flet as ft
 from utils.validations import validate_login
 from services import Fetch, Commit
+from flet.security import decrypt
+from config import SECRET_KEY
+from loguru import logger
 
 
 def LoginPage(page: ft.Page):
-
     new_avatar = ft.Ref[ft.CircleAvatar]()
 
     def generator_avatar(e):
@@ -40,7 +42,7 @@ def LoginPage(page: ft.Page):
         hint_text='Insira seu nome de usuário',
         col={"sm": 8, "md": 12, "xl": 12},
         on_change=generator_avatar,
-        border="underline",
+        border=ft.InputBorder.UNDERLINE,
         max_lines=1,
         max_length=20,
     )
@@ -48,7 +50,7 @@ def LoginPage(page: ft.Page):
     input_senha = ft.TextField(
         hint_text='Insira sua senha',
         password=True,
-        border="underline",
+        border=ft.InputBorder.UNDERLINE,
         max_lines=1,
         max_length=20,
         can_reveal_password=True,
@@ -73,101 +75,66 @@ def LoginPage(page: ft.Page):
     )
 
     # Função para tratar o evento de login
+
     def handle_login(e):
         username = input_username.value
         password = input_senha.value
 
-        # Validando os campos de login
+        # Validação dos campos de login
         is_valid, error_message = validate_login(username, password)
-        print(f"Validando login: is_valid={is_valid}, error_message={error_message}")
         if not is_valid:
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text(
-                    value=error_message, size=20,
-                    color=ft.colors.RED,
-                    weight=ft.FontWeight.W_600,
-                    italic=True)
-            )
+            logger.warning(f"Falha na validação do login para {username}: {error_message}")
+            # Exibindo a mensagem retornada pelo validate_login
+            page.snack_bar = ft.SnackBar(content=ft.Text(error_message))
             page.snack_bar.open = True
             page.update()
             return
 
         try:
-            # Verificar se o usuário existe e a senha corresponde
-            user = Fetch.fetch_user_by_username(username)
-
-            # Verificar se o admin existe e a senha corresponde
+            # Verificar se o admin existe
             admin = Fetch.fetch_admin_by_username(username)
 
             if admin is not None:
-                if admin['password'] == password:
-                    # Caso o usuário seja administrador
+                decrypted_admin_password = decrypt(admin['password'], SECRET_KEY)
+
+                if decrypted_admin_password == password:
+                    # Armazenar o ID do admin na sessão
+                    page.session.set("admin_id", admin['id'])
+                    page.session.set("admin_username", admin['username'])
+
+                    logger.info(f"Login bem-sucedido para o administrador: {username}, ID: {admin['id']}")
+
                     page.snack_bar = ft.SnackBar(
-                        content=ft.Text(
-                            value=f'{username} entrou como administrador',
-                            size=20,
-                            color=ft.colors.BLUE,
-                            weight=ft.FontWeight.W_600,
-                            italic=True
-                        )
+                        content=ft.Text(f'Bem-vindo de volta, {username}!', size=20, color=ft.colors.BLUE,
+                                        weight=ft.FontWeight.W_600)
                     )
                     page.snack_bar.open = True
                     page.update()
                     page.go('/admin')
-            elif user is not None:
-                if user['password'] == password:
-                    # Atualizar o último login
-                    Commit.update_last_login(user['id'])
-
-                    # Verificar se o avatar do usuário está registrado
-                    if 'avatar_url' not in user or not user['avatar_url']:
-                        # Atualizar o avatar no perfil do usuário
-                        avatar_url = new_avatar.current.foreground_image_src
-                        Commit.update_avatar_url(user['id'], avatar_url)
-
-                    page.snack_bar = ft.SnackBar(
-                        content=ft.Text(
-                            value='Login realizado com sucesso',
-                            size=20,
-                            color=ft.colors.BLUE,
-                            weight=ft.FontWeight.W_600,
-                            italic=True
-                        )
-                    )
+                else:
+                    logger.warning(f"Senha incorreta para o administrador: {username}")
+                    page.snack_bar = ft.SnackBar(content=ft.Text("Senha incorreta. Tente novamente."))
                     page.snack_bar.open = True
                     page.update()
-                    page.go('/home')
             else:
-                print("Nome de usuário ou senha incorretos")
-                raise Exception("Nome de usuário ou senha incorretos")
-
-        except ValueError as ve:
-            print(f"Erro de valor: {ve}")
-            page.snack_bar = ft.SnackBar(
-                content=ft.Text(
-                    value=str(ve),
-                    size=20,
-                    color=ft.colors.RED,
-                    weight=ft.FontWeight.W_600,
-                    italic=True
-                )
-            )
-            page.snack_bar.open = True
-            page.update()
+                logger.warning(f"Usuário {username} não encontrado")
+                page.snack_bar = ft.SnackBar(content=ft.Text("Usuário não encontrado. Verifique o nome de usuário."))
+                page.snack_bar.open = True
+                page.update()
 
         except Exception as ex:
-            print(f"Erro ao efetuar login: {ex}")
+            logger.error(f"Erro ao efetuar login para o usuário {username}: {ex}")
             page.snack_bar = ft.SnackBar(
                 content=ft.Text(
                     value=f"Erro ao efetuar login: {ex}",
                     size=20,
                     color=ft.colors.RED,
-                    weight=ft.FontWeight.W_600,
-                    italic=True
+                    weight=ft.FontWeight.W_600
                 )
             )
             page.snack_bar.open = True
             page.update()
+
 
     # Layout da página
     return ft.Container(
