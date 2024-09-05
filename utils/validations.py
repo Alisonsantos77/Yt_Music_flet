@@ -1,6 +1,5 @@
 import re
 
-
 def validate_register(username: str, email: str, password: str, confirm_password: str) -> tuple[bool, str]:
     """
     Valida os campos de registro.
@@ -17,31 +16,31 @@ def validate_register(username: str, email: str, password: str, confirm_password
     """
     # Verifica se todos os campos estão preenchidos
     if not username:
-        return False, "O campo de nome de usuário está vazio."
+        return False, "Ops! Parece que você esqueceu de preencher o nome de usuário."
     if not email:
-        return False, "O campo de email está vazio."
+        return False, "Hmm, o campo de email está vazio. Preenche ele aí!"
     if not password:
-        return False, "O campo de senha está vazio."
+        return False, "A senha está faltando! Não se esqueça dela!"
     if not confirm_password:
-        return False, "O campo de confirmação de senha está vazio."
+        return False, "Você precisa confirmar sua senha. Vai que digita errado, né?"
 
     # Verifica se o nome de usuário é válido
     if not validate_username(username):
-        return False, "O nome de usuário é inválido. Use pelo menos 3 caracteres alfanuméricos."
+        return False, "Opa! O nome de usuário precisa ter pelo menos 3 caracteres e ser alfanumérico."
 
     # Verifica se o email é válido
     if not validate_email(email):
-        return False, "O email fornecido é inválido."
+        return False, "Esse email não parece válido. Dá uma olhada e tenta de novo!"
 
     # Verifica se a senha é válida
     if not validate_password(password):
-        return False, "A senha deve conter pelo menos 8 caracteres, incluindo letras maiúsculas, minúsculas e números."
+        return False, "A senha precisa ter pelo menos 8 caracteres e incluir letras maiúsculas, minúsculas e números."
 
     # Verifica se a confirmação da senha corresponde à senha
     if password != confirm_password:
-        return False, "As senhas não correspondem."
+        return False, "As senhas não correspondem. Dá uma revisada e tenta de novo."
 
-    return True, ""
+    return True, "Tudo certo! Vamos em frente!"
 
 
 def validate_username(username: str) -> bool:
@@ -83,12 +82,12 @@ def validate_login(username: str, password: str) -> tuple[bool, str]:
     """
     # Verifica se todos os campos estão preenchidos
     if not username:
-        return False, "O campo de nome de usuário está vazio."
+        return False, "Ops! Esqueceu de preencher o nome de usuário."
     if not password:
-        return False, "O campo de senha está vazio."
+        return False, "Cadê a senha? Preencha para continuar."
 
     # Verifica se o nome de usuário é válido
     if not validate_username(username):
-        return False, "O nome de usuário é inválido. Use pelo menos 3 caracteres alfanuméricos."
+        return False, "O nome de usuário deve ter pelo menos 3 caracteres alfanuméricos."
 
-    return True, ""
+    return True, "Login validado com sucesso!"
