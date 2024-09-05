@@ -14,29 +14,27 @@ def setup_routes(page: ft.Page):
         page.views.clear()
         page.views.append(
             ft.View(
-                route="/admin",
-                scroll=ft.ScrollMode.HIDDEN,
+                route="/login",
                 controls=[
-                    AdminPage(page)
+                    LoginPage(page)
                 ],
             )
         )
-        if page.route == "/login":
-            page.views.append(
-                ft.View(
-                    route="/login",
-                    controls=[
-                        LoginPage(page)
-                    ],
-                )
-            )
-
         if page.route == "/register":
             page.views.append(
                 ft.View(
                     "/register",
                     [
                         RegisterPage(page)
+                    ],
+                )
+            )
+        if page.route == "/admin":
+            page.views.append(
+                ft.View(
+                    "/admin",
+                    [
+                        AdminPage(page)
                     ],
                 )
             )
