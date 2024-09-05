@@ -40,6 +40,13 @@ class SidebarContent(ft.UserControl):
         self.expand = True
 
     def logout_app(self, e):
+        # Limpa a sessão ao fazer logout
+        self.page.session.clear()
+        self.page.snack_bar = ft.SnackBar(content=ft.Text("Você foi desconectado com sucesso!"))
+        self.page.snack_bar.open = True
+        self.page.update()
+
+        # Redirecionar para a página de login
         self.page.go('/login')
 
     def build(self):
