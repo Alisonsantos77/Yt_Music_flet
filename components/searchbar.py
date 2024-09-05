@@ -1,19 +1,25 @@
 import flet as ft
-
-
-def handle_change(e):
-    print(f"handle_change e.data: {e.data}")
-
-
-def handle_submit(e):
-    print(f"handle_submit e.data: {e.data}")
+from services import Fetch  # Importa Fetch para usar no filtro
 
 
 class SearchBarItem(ft.UserControl):
-    def __init__(self, placeholder: str = "Digite sua pesquisa...", button_text: str = "Pesquisar", **kwargs):
+    def __init__(self, on_search_results, placeholder: str = "Digite sua pesquisa...", **kwargs):
         super().__init__(**kwargs)
+        self.on_search_results = on_search_results  # Função para atualizar a tabela no MainContent
         self.placeholder = placeholder
-        self.button_text = button_text
+
+    def search_user(self, query):
+        # Filtra os usuários com base no username ou email
+        filtered_users = [user for user in Fetch.users if query.lower() in user['username'].lower() or query.lower() in user['email'].lower()]
+        return filtered_users
+
+    def handle_change(self, e):
+        query = e.data.strip()
+        if query:
+            search_results = self.search_user(query)
+            self.on_search_results(search_results)  # Atualiza a tabela com os resultados
+        else:
+            self.on_search_results(None)  # Se a query estiver vazia, exibe todos os usuários
 
     def build(self):
         return ft.Container(
@@ -39,20 +45,14 @@ class SearchBarItem(ft.UserControl):
                                     width=300,
                                     view_elevation=4,
                                     view_bgcolor=ft.colors.BACKGROUND,
-                                    on_change=handle_change,
-                                    on_submit=handle_submit,
+                                    on_change=self.handle_change,  # Usamos a função handle_change
                                 ),
                                 ft.IconButton(
                                     icon=ft.icons.SEARCH_ROUNDED,
                                 )
                             ]
                         ),
-
                     ]
                 )
             )
         )
-
-    def on_search_click(self, e):
-        # Aqui você pode adicionar a lógica para realizar a pesquisa quando o botão é clicado
-        print("Botão de pesquisa clicado!")
