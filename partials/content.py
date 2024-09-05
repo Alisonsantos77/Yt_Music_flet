@@ -34,11 +34,57 @@ class MainContent(ft.UserControl):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.expand = True
+        self.filtered_users = Fetch.users  # Inicializa com todos os usuários
+        self.table = None  # Inicializa a tabela
+        self.table_container = None  # Inicializa o container da tabela
+
+    def update_user_table(self, filtered_users):
+        self.filtered_users = filtered_users
+        self.update()
+
+    def update_table(self, search_results):
+        # Atualiza os usuários filtrados com base na pesquisa
+        if search_results:
+            self.filtered_users = search_results  # Atualiza com os resultados da busca
+        else:
+            self.filtered_users = Fetch.users  # Se não houver resultados, volta para todos os usuários
+
+        # Atualiza as linhas da tabela dinamicamente
+        self.table.rows = [
+            ft.DataRow(
+                cells=[
+                    ft.DataCell(
+                        ft.CircleAvatar(
+                            foreground_image_src=user['avatar_url'] if user[
+                                'avatar_url'] else "https://robohash.org/userdefault.png",
+                            content=ft.Text(user['username'][0:1].upper()),
+                        )
+                    ),
+                    ft.DataCell(ft.Text(user['username'])),
+                    ft.DataCell(ft.Text(user['email'])),
+                    ft.DataCell(ft.Text(
+                        datetime.fromisoformat(user['created_at']).strftime("%Y-%m-%d %H:%M:%S")
+                    )),
+                    ft.DataCell(ft.Text(
+                        datetime.fromisoformat(user['last_login']).strftime("%Y-%m-%d %H:%M:%S")
+                    )),
+                ],
+            ) for user in self.filtered_users
+        ]
+        self.update()  # Atualiza o controle para refletir as mudanças na página
 
     def build(self):
-        searchbar = SearchBarItem(placeholder="Pesquisar...")
+        self.filtered_users = Fetch.users  # Inicializa com todos os usuários carregados
+        self.table = None  # Referência para a tabela
 
         def accept_request(request_id):
+            # Recupera o admin_id da sessão
+            admin_id = self.page.session.get("admin_id")
+
+            if not admin_id:
+                print("Erro: ID do administrador não encontrado na sessão.")
+                return
+
             # Encontrar a request correspondente no Fetch.requests
             request = next((req for req in Fetch.requests if req['id'] == request_id), None)
 
@@ -49,9 +95,9 @@ class MainContent(ft.UserControl):
                     'email': request['email'],
                     'password': request['password'],
                     'created_at': datetime.now(timezone.utc).isoformat(),
+                    'approved_by_admin_id': admin_id,  # Atribuir ID do administrador
                 }
 
-                # Enviar os dados para a tabela de usuários no backend
                 try:
                     Commit.commit_user_to_table(user_data)  # Função que move para a tabela de usuários
                     print(f"Usuário {user_data['username']} aceito e movido para a tabela de usuários.")
@@ -61,15 +107,24 @@ class MainContent(ft.UserControl):
 
                     Fetch.fetch_all_users()
 
-                    # Após aceitar, remover a request da lista Fetch.requests localmente
                     Fetch.requests = [req for req in Fetch.requests if req['id'] != request_id]
-                    print(f"Request {request_id} foi aceita e removida da lista local.")
-
                     self.page.update()
                 except Exception as error:
                     print(f"Erro ao aceitar request {request_id}: {error}")
-            else:
-                print(f"Request {request_id} não encontrada.")
+
+        def reject_request(request_id):
+            # Recupera o admin_id da sessão
+            admin_id = self.page.session.get("admin_id")
+
+            if not admin_id:
+                print("Erro: ID do administrador não encontrado na sessão.")
+                return
+
+            # Aqui, apenas remova a request visualmente, sem rejeição no banco de dados
+            print(f"Solicitação {request_id} foi passada pelo admin {admin_id}.")
+
+            Fetch.requests = [req for req in Fetch.requests if req['id'] != request_id]
+            self.page.update()
 
         def handle_dismiss(e):
             # Remove o item da lista e atualiza a pilha
@@ -82,7 +137,7 @@ class MainContent(ft.UserControl):
         def handle_update(e: ft.DismissibleUpdateEvent):
             # Função chamada quando o item é arrastado (update visual durante o movimento)
             print(
-                f"Update - direction: {e.direction}, progress: {e.progress}, reached: {e.reached}, previous_reached: {e.previous_reached}")
+                f"Update - direction: {e.direction}, reached: {e.reached}, previous_reached: {e.previous_reached}")
 
         def handle_confirm_dismiss(e: ft.DismissibleDismissEvent):
             # Função para confirmar o deslize e aplicar o efeito de escala e animação de retorno
@@ -93,89 +148,55 @@ class MainContent(ft.UserControl):
             else:
                 e.control.confirm_dismiss(True)  # Deslize aceito sem confirmação adicional
 
-        header_dt = ft.Container(
-            expand=True,
-            alignment=ft.alignment.center,
-            content=ft.Container(
-                padding=ft.padding.symmetric(vertical=50, horizontal=80),
-                border_radius=ft.border_radius.all(10),
-                blur=ft.Blur(sigma_x=8, sigma_y=8),
-                bgcolor=ft.colors.with_opacity(0.1, ft.colors.WHITE),
-                border=ft.Border(
-                    top=ft.BorderSide(width=2, color=ft.colors.WHITE30),
-                    right=ft.BorderSide(width=2, color=ft.colors.WHITE30),
-                ),
-                content=ft.ResponsiveRow(
-                    vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                    controls=[
-                        ft.Column(
-                            col={"sm": 8, "md": 4, "xl": 6},
-                            controls=[
-                                ft.Text(value="Meus Usuários", size=32, weight=ft.FontWeight.W_900,
-                                        color=ft.colors.WHITE),
-                            ]
+        searchbar = SearchBarItem(on_search_results=self.update_table)  # Passa a função de atualização
+
+        # Definição da tabela de usuários
+        self.table = ft.DataTable(
+            columns=[
+                ft.DataColumn(ft.Text("Avatar")),
+                ft.DataColumn(ft.Text("Username")),
+                ft.DataColumn(ft.Text("Email")),
+                ft.DataColumn(ft.Text("Created At")),
+                ft.DataColumn(ft.Text("Last Login")),
+            ],
+            rows=[  # Inicializa a tabela com todos os usuários
+                ft.DataRow(
+                    cells=[
+                        ft.DataCell(
+                            ft.CircleAvatar(
+                                foreground_image_src=user['avatar_url'] if user[
+                                    'avatar_url'] else "https://robohash.org/userdefault.png",
+                                content=ft.Text(user['username'][0:1].upper()),
+                            )
                         ),
-                        ft.Column(
-                            col={"sm": 6, "md": 4, "xl": 2},
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            controls=[
-                                ft.Text(value=str(quantity_users), size=32, weight=ft.FontWeight.W_700,
-                                        color=ft.colors.WHITE),
-                                ft.Text(value="Registros", size=16, color=ft.colors.GREY_50),
-                            ]
-                        ),
-                        ft.Column(
-                            col={"sm": 6, "md": 4, "xl": 2},
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            controls=[
-                                ft.Text(value=str(quantity_requests), size=32, weight=ft.FontWeight.W_700,
-                                        color=ft.colors.WHITE),
-                                ft.Text(value="Solicitações", size=16, color=ft.colors.GREY_50),
-                            ]
-                        ),
-                        ft.Column(
-                            col={"sm": 6, "md": 4, "xl": 2},
-                            horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-                            controls=[
-                                ft.Text(value=str(quantity_active_users), size=32, weight=ft.FontWeight.W_700,
-                                        color=ft.colors.WHITE),
-                                ft.Text(value="Ativos", size=16, color=ft.colors.GREY_50),
-                            ]
-                        ),
-                        ft.Divider(height=30),
-                        ft.DataTable(
-                            columns=[
-                                ft.DataColumn(ft.Text("Avatar")),
-                                ft.DataColumn(ft.Text("Username")),
-                                ft.DataColumn(ft.Text("Email")),
-                                ft.DataColumn(ft.Text("Created At")),
-                                ft.DataColumn(ft.Text("Last Login")),
-                            ],
-                            rows=[
-                                ft.DataRow(
-                                    cells=[
-                                        ft.DataCell(
-                                            ft.CircleAvatar(
-                                                foreground_image_src=user['avatar_url'] if user[
-                                                    'avatar_url'] else "https://robohash.org/userdefault.png",
-                                                content=ft.Text(user['username'][0:1].upper()),
-                                            )
-                                        ),
-                                        ft.DataCell(ft.Text(user['username'])),
-                                        ft.DataCell(ft.Text(user['email'])),
-                                        ft.DataCell(ft.Text(
-                                            datetime.fromisoformat(user['created_at']).strftime("%Y-%m-%d %H:%M:%S"))),
-                                        ft.DataCell(ft.Text(
-                                            datetime.fromisoformat(user['last_login']).strftime("%Y-%m-%d %H:%M:%S"))),
-                                    ],
-                                ) for user in Fetch.users
-                            ],
-                        )
+                        ft.DataCell(ft.Text(user['username'])),
+                        ft.DataCell(ft.Text(user['email'])),
+                        ft.DataCell(ft.Text(
+                            datetime.fromisoformat(user['created_at']).strftime("%Y-%m-%d %H:%M:%S")
+                        )),
+                        ft.DataCell(ft.Text(
+                            datetime.fromisoformat(user['last_login']).strftime("%Y-%m-%d %H:%M:%S")
+                        )),
                     ],
-                ),
-            )
+                ) for user in self.filtered_users
+            ],
         )
 
+        # Container com efeito vidro ao redor da tabela
+        self.table_container = ft.Container(
+            expand=True,
+            content=self.table,
+            padding=ft.padding.symmetric(vertical=50, horizontal=80),
+            border_radius=ft.border_radius.all(10),
+            blur=ft.Blur(sigma_x=8, sigma_y=8),
+            bgcolor=ft.colors.with_opacity(0.1, ft.colors.WHITE),
+            border=ft.Border(
+                top=ft.BorderSide(width=2, color=ft.colors.WHITE30),
+                right=ft.BorderSide(width=2, color=ft.colors.WHITE30),
+            ),
+        )
+
+        # Definição de estatísticas com LineChart
         statics = ft.Container(
             expand=True,
             alignment=ft.alignment.center,
@@ -269,9 +290,14 @@ class MainContent(ft.UserControl):
                 ft.Dismissible(
                     content=ft.Container(
                         padding=ft.padding.all(20),
-                        border_radius=ft.border_radius.all(15),
-                        bgcolor=ft.colors.WHITE,
+                        border_radius=ft.border_radius.all(10),
+                        bgcolor=ft.colors.with_opacity(0.1, ft.colors.WHITE),
+                        blur=ft.Blur(sigma_x=8, sigma_y=8),
                         shadow=ft.BoxShadow(blur_radius=50, color=ft.colors.BLACK12),
+                        border=ft.Border(
+                            top=ft.BorderSide(width=2, color=ft.colors.WHITE30),
+                            right=ft.BorderSide(width=2, color=ft.colors.WHITE30),
+                        ),
                         content=ft.Column(
                             spacing=20,
                             controls=[
@@ -292,13 +318,15 @@ class MainContent(ft.UserControl):
                                                                 foreground_image_src=request['avatar_url'] if request[
                                                                     'avatar_url'] else "https://robohash.org/userdefault.png",
                                                                 content=ft.Text(request['username'][0:1].upper()),
+                                                                width=100,
+
                                                             ),
                                                             ft.Container(
                                                                 content=ft.Text(
                                                                     value=request['username'],
-                                                                    size=16,
-                                                                    color=ft.colors.BLACK,
-                                                                    weight=ft.FontWeight.W_600,
+                                                                    size=24,
+                                                                    color=ft.colors.WHITE,
+                                                                    weight=ft.FontWeight.BOLD,
                                                                 ),
                                                                 col={"xs": 12, "sm": 6, "md": 5, "lg": 6, "xl": 6,
                                                                      "xxl": 6},
@@ -315,8 +343,8 @@ class MainContent(ft.UserControl):
                                                                         ft.Text(
                                                                             value=request['email'],
                                                                             size=16,
-                                                                            color=ft.colors.BLACK,
-                                                                            weight=ft.FontWeight.W_600,
+                                                                            color=ft.colors.WHITE,
+                                                                            weight=ft.FontWeight.BOLD,
                                                                         ),
                                                                     ]
                                                                 ),
@@ -332,8 +360,8 @@ class MainContent(ft.UserControl):
                                                                                 request['created_at']).strftime(
                                                                                 "%Y-%m-%d"),
                                                                             size=16,
-                                                                            color=ft.colors.BLACK,
-                                                                            weight=ft.FontWeight.W_600,
+                                                                            color=ft.colors.WHITE,
+                                                                            weight=ft.FontWeight.BOLD,
                                                                         ),
                                                                     ]
                                                                 ),
@@ -355,6 +383,7 @@ class MainContent(ft.UserControl):
                                                 text='Rejeitar',
                                                 bgcolor=ft.colors.RED,
                                                 color=ft.colors.WHITE,
+                                                on_click=lambda e, req_id=request['id']: reject_request(req_id)
                                             ),
                                             ft.ElevatedButton(
                                                 text='Aceitar',
@@ -386,13 +415,15 @@ class MainContent(ft.UserControl):
                 ) for pos, request in reversed(list(enumerate(Fetch.requests)))
             ]
         )
+
         return ft.Container(
             content=ft.Row(
                 controls=[
                     ft.Column(
                         scroll=ft.ScrollMode.HIDDEN,
                         controls=[
-                            header_dt,
+                            searchbar,
+                            self.table_container,
                             ft.ResponsiveRow(
                                 controls=[
                                     ft.Container(
