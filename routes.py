@@ -3,66 +3,106 @@ from pages.login_page import LoginPage
 from pages.register_page import RegisterPage
 from pages.admin_page import AdminPage
 from pages.adminregister_page import AdminRegisterPage
+from pages.welcome_page import WelcomePage
+from pages.adminlogin_page import AdminLoginPage
+from pages.encrypt_test import TestEncryptPage
 from loguru import logger
 
 
 def setup_routes(page: ft.Page):
     logger.info("Configurando rotas")
     page.theme = ft.Theme(
-        page_transitions={'windows': ft.PageTransitionTheme.ZOOM},
+        page_transitions={'windows': ft.PageTransitionTheme.FADE_UPWARDS},
     )
 
     def route_change(route):
         logger.info(f"Rota alterada: {route}")
         page.views.clear()
+
+        # Página de boas-vindas (sem botão de voltar)
         page.views.append(
             ft.View(
-                route="/login",
-                controls=[LoginPage(page)],
+                route="/",
+                controls=[WelcomePage(page)],
             )
         )
-        logger.info("Página de Login carregada")
+        logger.info("Página de Boas-vindas carregada")
 
-        if page.route == "/adminregister":
+        # Página de login de usuário
+        if page.route == "/login":
             page.views.append(
                 ft.View(
-                    "/adminregister",
-                    [
-                        AdminRegisterPage(page)
+                    route="/login",
+                    appbar=ft.AppBar(),
+
+                    controls=[
+                        LoginPage(page)
                     ],
+                )
+            )
+            logger.info("Página de Login do Usuário carregada")
+
+        # Página de login de admin
+        elif page.route == "/adminlogin":
+            page.views.append(
+                ft.View(
+                    route="/adminlogin",
+                    appbar=ft.AppBar(),
+                    controls=[
+
+                        AdminLoginPage(page)],
+                )
+            )
+            logger.info("Página de Login do Admin carregada")
+
+        # Página de registro de admin
+        elif page.route == "/adminregister":
+            page.views.append(
+                ft.View(
+                    route="/adminregister",
+                    appbar=ft.AppBar(),
+
+                    controls=[
+                        AdminRegisterPage(page)],
                 )
             )
             logger.info("Página de Registro de Admin carregada")
 
-        if page.route == "/register":
+        # Página de registro de usuário
+        elif page.route == "/register":
             page.views.append(
                 ft.View(
-                    "/register",
-                    [
-                        RegisterPage(page)
-                    ],
+                    route="/register",
+                    appbar=ft.AppBar(),
+
+                    controls=[
+                        RegisterPage(page)],
                 )
             )
             logger.info("Página de Registro carregada")
 
-        if page.route == "/admin":
+        # Página de Admin
+        elif page.route == "/admin":
             page.views.append(
                 ft.View(
-                    "/admin",
-                    [
-                        AdminPage(page)
-                    ],
+                    route="/admin",
+                    appbar=ft.AppBar(),
+
+                    controls=[
+                        AdminPage(page)],
                 )
             )
             logger.info("Página de Admin carregada")
 
-        if page.route == "/home":
+        # Página Home
+        elif page.route == "/home":
             page.views.append(
                 ft.View(
-                    "/home",
-                    [
-                        ft.AppBar(title=ft.Text("Home aqui"), bgcolor=ft.colors.SURFACE_VARIANT),
-                        ft.ElevatedButton("Voltar login", on_click=lambda _: page.go("/")),
+                    route="/home",
+                    appbar=ft.AppBar(),
+
+                    controls=[
+                        ft.Text("Bem-vindo à página Home!"),
                     ],
                 )
             )
