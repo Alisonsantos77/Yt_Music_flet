@@ -38,7 +38,7 @@ def RegisterPage(page: ft.Page):
 
     input_username = ft.TextField(
         hint_text='Insira seu nome de usuário',
-        col={"sm": 8, "md": 12, "xl": 12},
+        col={"sm": 12, "md": 10, "xl": 8},
         on_change=generator_avatar,
         border=ft.InputBorder.UNDERLINE,
         max_lines=1,
@@ -46,7 +46,7 @@ def RegisterPage(page: ft.Page):
     )
     input_email = ft.TextField(
         hint_text='Insira seu email',
-        col={"sm": 8, "md": 12, "xl": 12},
+        col={"sm": 12, "md": 10, "xl": 8},
         border=ft.InputBorder.UNDERLINE,
         max_lines=1,
         max_length=20,
@@ -59,7 +59,7 @@ def RegisterPage(page: ft.Page):
         max_lines=1,
         max_length=20,
         can_reveal_password=True,
-        col={"sm": 8, "md": 12, "xl": 12},
+        col={"sm": 12, "md": 10, "xl": 8},
     )
     input_senha_confirm = ft.TextField(
         hint_text='Confirme sua senha',
@@ -68,81 +68,107 @@ def RegisterPage(page: ft.Page):
         max_lines=1,
         max_length=20,
         can_reveal_password=True,
-        col={"sm": 8, "md": 12, "xl": 12},
+        col={"sm": 12, "md": 10, "xl": 8},
     )
 
     have_account = ft.TextButton(
         text='Já possui uma conta?',
         col={"sm": 8, "md": 12, "xl": 12},
         style=ft.ButtonStyle(
-            color=ft.colors.BLUE_700,
+            color={
+                ft.ControlState.DEFAULT: ft.colors.WHITE,
+                ft.ControlState.HOVERED: ft.colors.BLACK,
+            },
             elevation=2,
-            overlay_color=ft.colors.TRANSPARENT
+            overlay_color=ft.colors.TRANSPARENT,
+
         ),
         on_click=login_redirect
     )
 
     def handle_register(e):
-        username = input_username.value
-        email = input_email.value
-        password = input_senha.value
-        confirm_password = input_senha_confirm.value
+        username = input_username.value.strip()
+        email = input_email.value.strip()
+        password = input_senha.value.strip()
+        confirm_password = input_senha_confirm.value.strip()
 
-        # Logando início do processo de registro
-        logger.info(f"Tentativa de registro para o usuário: {username}")
-
-        # Validação dos campos
         is_valid, error_message = validate_register(username, email, password, confirm_password)
         if not is_valid:
             logger.warning(f"Falha na validação do registro para {username}: {error_message}")
-            page.snack_bar = ft.SnackBar(content=ft.Text(error_message))  # Usa a mensagem humanizada
+            page.snack_bar = ft.SnackBar(content=ft.Text(
+                error_message,
+                size=20,
+                color=ft.colors.RED,
+                weight=ft.FontWeight.W_600,
+                italic=True
+            ))
+            page.snack_bar.open = True
+            page.update()
+            return
+
+        is_existing, field = Fetch.validate_user_and_admin_credentials(username, email)
+        if is_existing:
+            field_message = "nome de usuário" if field == "username" else "e-mail"
+            page.snack_bar = ft.SnackBar(content=ft.Text(
+                f"O {field_message} já existe.",
+                size=20,
+                color=ft.colors.RED,
+                weight=ft.FontWeight.W_600,
+                italic=True
+            ))
             page.snack_bar.open = True
             page.update()
             return
 
         try:
-            # Criptografando a senha
             encrypted_password = encrypt(password, SECRET_KEY)
-            logger.info(f"Senha criptografada para {username}")
+            avatar_url = f"https://robohash.org/{username}.png"
 
-            # Inserindo o usuário na tabela `registration_requests` com status 'pending'
-            Commit.commit_registration_request(
-                data={
-                    'username': username,
-                    'email': email,
-                    'password': encrypted_password,
-                    'status': 'pending',  # Define o status como 'pending'
-                    'reviewed_by_admin_id': None  # Nenhum admin revisou ainda
-                }
-            )
+            data = {
+                'username': username,
+                'email': email,
+                'password': encrypted_password,
+                'avatar_url': avatar_url,
+                'status': 'pending',
+                'reviewed_by_admin_id': None
+            }
 
-            logger.info(f"Usuário {username} registrado na tabela de requests com status 'pending'.")
-
-            # Notificando o sucesso
+            Commit.commit_registration_request(data)
+            logger.info(f"Usuário {username} registrado com sucesso.")
             page.snack_bar = ft.SnackBar(
-                content=ft.Text("Cadastro enviado para revisão. Aguarde a aprovação de um administrador!"))
+                content=ft.Text(
+                    value="Cadastro enviado para revisão!",
+                    size=20,
+                    color=ft.colors.GREEN,
+                    weight=ft.FontWeight.W_600,
+                    italic=True
+                ),
+            )
             page.snack_bar.open = True
             page.update()
 
-            # Redirecionar para a página de login
             page.go('/login')
 
         except Exception as error:
             logger.error(f"Erro ao registrar a solicitação de {username}: {error}")
-            page.snack_bar = ft.SnackBar(content=ft.Text(f"Desculpe, ocorreu um erro durante o cadastro: {str(error)}"))
+            page.snack_bar = ft.SnackBar(content=ft.Text(
+                value=f"Erro: {str(error)}",
+                size=20,
+                color=ft.colors.RED,
+                weight=ft.FontWeight.W_600,
+                italic=True
+            ))
             page.snack_bar.open = True
             page.update()
 
     return ft.Container(
-        image_src='https://images3.alphacoders.com/133/1332803.png',
-        image_fit=ft.ImageFit.COVER,
         expand=True,
         alignment=ft.alignment.center,
         content=ft.Container(
-            padding=ft.padding.symmetric(vertical=50, horizontal=80),
+            padding=ft.padding.symmetric(vertical=10, horizontal=40),
             border_radius=ft.border_radius.all(10),
             blur=ft.Blur(sigma_x=8, sigma_y=8),
-            aspect_ratio=9 / 16,
+            margin=5,
             bgcolor=ft.colors.with_opacity(0.1, ft.colors.WHITE),
             border=ft.Border(
                 top=ft.BorderSide(width=2, color=ft.colors.WHITE30),
@@ -161,23 +187,38 @@ def RegisterPage(page: ft.Page):
                                 controls=[
                                     ft.Row(
                                         alignment=ft.MainAxisAlignment.CENTER,
+                                        controls=[avatar]
+                                    ),
+                                    ft.ResponsiveRow(
+                                        col=12,
+                                        alignment=ft.MainAxisAlignment.CENTER,
                                         controls=[
-                                            avatar
+                                            ft.Text(
+                                                value="Crie sua conta AlDev",
+                                                size=22,
+                                                color=ft.colors.WHITE,
+                                                weight=ft.FontWeight.BOLD,
+                                                col={"sm": 5, "md": 4, "xl": 12},
+                                            ),
+                                            ft.Text(
+                                                value="Acesse todos os apps AlDev com uma única conta.",
+                                                size=16,
+                                                color=ft.colors.GREY_300,
+                                                weight=ft.FontWeight.NORMAL,
+                                                overflow=ft.TextOverflow.ELLIPSIS,
+                                                col={"sm": 5, "md": 4, "xl": 12},
+                                            ),
                                         ]
                                     ),
-                                    ft.Text(
-                                        value="Crie sua conta",
-                                        size=20,
-                                        color=ft.colors.WHITE,
-                                        weight=ft.FontWeight.BOLD,
-                                        col={"sm": 5, "md": 4, "xl": 12},
-                                    ),
+
+
                                 ]
                             ),
                         ],
                     ),
                     ft.ResponsiveRow(
                         col={"sm": 10, "md": 12, "xl": 12},
+                        alignment=ft.MainAxisAlignment.CENTER,
                         controls=[
                             input_username,
                             input_email,
@@ -188,15 +229,18 @@ def RegisterPage(page: ft.Page):
                                 style=ft.ButtonStyle(
                                     padding=ft.padding.all(10),
                                     bgcolor={
-                                        ft.MaterialState.HOVERED: ft.colors.PRIMARY,
+                                        ft.ControlState.HOVERED: ft.colors.WHITE,
                                     },
                                     color={
-                                        ft.MaterialState.DEFAULT: ft.colors.WHITE,
-                                        ft.MaterialState.HOVERED: ft.colors.BLACK,
-
-                                    }
+                                        ft.ControlState.DEFAULT: ft.colors.WHITE,
+                                        ft.ControlState.HOVERED: ft.colors.BLACK,
+                                    },
+                                    elevation={"pressed": 0, "": 1},
+                                    animation_duration=500,
+                                    shape=ft.RoundedRectangleBorder(radius=6),
                                 ),
-                                on_click=handle_register
+                                on_click=handle_register,
+                                col={"sm": 8, "md": 10, "xl": 6},
                             ),
                             ft.Row(
                                 alignment=ft.MainAxisAlignment.CENTER,
@@ -205,10 +249,10 @@ def RegisterPage(page: ft.Page):
                                 ]
                             ),
                         ],
-                        run_spacing={"xs": 10},
+                        run_spacing={"xs": 5},
                     ),
                 ],
-                spacing=20
+                spacing=5
             )
         )
     )
